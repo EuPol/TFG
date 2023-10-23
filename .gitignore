@@ -1,4 +1,8 @@
-__pycache__/
-datasets/
-experiments/
+__pycache__/*
+
+# ignore datasets
+datasets/FaceCOX_RN100_512D_full_splitted.obj
+
+# ignore experiments
+experiments/*
 
