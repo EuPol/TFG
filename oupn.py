@@ -107,7 +107,7 @@ class OUPN():
         u,y=self.e_step(features, self.prototypes, self.beta, self.gamma, self.tau)
         return min(u),np.argmax(y)
     
-    def bhattacharyya_distance(gaussian1, gaussian2):
+    def bhattacharyya_distance(self, gaussian1, gaussian2):
         # Gaussian1 y Gaussian2 son diccionarios que contienen información sobre las gaussianas.
         # Por ejemplo, Gaussian1 = {"p": media1, "sigma": varianza1}, Gaussian2 = {"p": media2, "sigma": varianza2}
 
@@ -118,24 +118,24 @@ class OUPN():
 
         # Calcular la distancia de Bhattacharyya
         term1 = 1/4 * np.log((var1/var2 + var2/var1 + 2) / 4)
-        term2 = 1/4 * ((mean1 - mean2)**2 / (var1 + var2))
+        term2 = 1/4 * np.sum((mean1 - mean2)**2 / (var1 + var2), axis=-1)
         distance = term1 + term2
 
         return distance
 
-    def measure_overlap(self):
+    def measure_overlap(self, prototypes):
         overlap_count = 0
         total_pairs = 0
 
-        for i in range(len(self.prototypes)):
-            for j in range(i + 1, len(self.prototypes)):
+        for i in range(len(prototypes)):
+            for j in range(i + 1, len(prototypes)):
                 # Calcula la distancia de Bhattacharyya entre las gaussianas i y j
-                bhattacharyya_dist = self.bhattacharyya_distance(self.prototypes[i], self.prototypes[j])
+                bhattacharyya_dist = self.bhattacharyya_distance(prototypes[i], prototypes[j])
 
                 # Define un umbral para determinar si hay solapamiento
                 threshold = 0.5  # Ajusta este valor según tus necesidades
 
-                if bhattacharyya_dist < threshold:
+                if bhattacharyya_dist <= -np.log(threshold):
                     overlap_count += 1
 
                 total_pairs += 1

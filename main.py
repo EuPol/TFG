@@ -142,6 +142,9 @@ if __name__ == '__main__':
             elif predicted_label >= 0:
                 csv_data[str(predicted_label)].append(str(id_object)+'_'+str(step+1))
 
+    overlap_percentage = model.measure_overlap(model.prototypes)
+    print("Overlap percentage: ", overlap_percentage)
+
     csv_final = {}  # Acabar de implementar los csv
     for index, ensemble in enumerate(model.prototypes):
         csv_final[str(index)] = []
