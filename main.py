@@ -144,6 +144,8 @@ if __name__ == '__main__':
 
     overlap_percentage = model.measure_overlap(model.prototypes)
     print("Overlap percentage: ", overlap_percentage)
+    output_file = 'prototype_identity_labels.txt'
+    model.calculate_prototype_identity_labels(output_file)
 
     csv_final = {}  # Acabar de implementar los csv
     for index, ensemble in enumerate(model.prototypes):

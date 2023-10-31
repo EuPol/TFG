@@ -6,3 +6,6 @@ datasets/*
 # ignore experiments
 experiments/*
 
+# ignore txt files
+*.txt
+
