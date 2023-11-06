@@ -122,8 +122,8 @@ class OUPN():
         distance = term1 + term2
 
         return distance
-    '''
-    def measure_overlap(self, prototypes):
+    
+    def measure_overlap_bhattacharyya(self, prototypes):
         overlap_count = 0
         total_pairs = 0
 
@@ -142,7 +142,7 @@ class OUPN():
 
         overlap_percentage = (overlap_count / total_pairs) * 100.0
         return overlap_percentage
-    '''
+    
     def calculate_prototype_overlap(self):
         # Crea un diccionario donde las claves son etiquetas de identidad y los valores son listas de prototipos
         identity_prototype_dict = {}
@@ -161,9 +161,7 @@ class OUPN():
     def measure_overlap(self, prototypes):
         
         identity_prototype_dict = self.calculate_prototype_overlap()
-        print(identity_prototype_dict)
-        #identity_prototype_dict_2 = self.calculate_prototype_overlap_2()
-        #print(identity_prototype_dict_2)
+        #print(identity_prototype_dict)
 
         # Calcula el solapamiento de prototipos
         prototype_overlap_count = 0
@@ -173,18 +171,11 @@ class OUPN():
 
         total_prototypes = len(prototypes)
         overlap_percentage = (prototype_overlap_count / total_prototypes) * 100.0
-        print("prototype_overlap_count", prototype_overlap_count)
-        print("total_prototypes", total_prototypes)
-        print("overlap_percentage", overlap_percentage / 100.0)
+
         return overlap_percentage
 
     def calculate_prototype_identity_labels(self, output_file):
-        """
-        Calculate the identity labels of prototypes and save them to a text file.
-
-        Args:
-            output_file (str): The path to the output text file.
-        """
+        # Calculate the identity labels of prototypes and save them to a text file.
         with open(output_file, 'w') as file:
             for i, ensemble in enumerate(self.prototypes):
                 if ensemble['sample_labels']:
@@ -192,7 +183,7 @@ class OUPN():
                     file.write(f'Prototipo {i}, {identity_label}\n')
                 else:
                     file.write(f'Prototipo {i}, N/A\n')
-    
+    '''
     def calculate_prototype_overlap_2(self):
         # Crea un diccionario para rastrear qué prototipos se inicializaron con la misma entidad
         identity_prototype_dict = defaultdict(list)
@@ -206,3 +197,4 @@ class OUPN():
             identity_prototype_dict[entity].append(idx)
 
         return identity_prototype_dict
+    '''
