@@ -167,12 +167,11 @@ class OUPN():
         prototype_overlap_count = 0
         for label, prot in identity_prototype_dict.items():
             if len(prot) > 1:
-                prototype_overlap_count += len(prot)
+                #prototype_overlap_count += len(prot)
+                #prototype_overlap_count += 1
+                prototype_overlap_count += len(prot) * (len(prot) - 1) / 2
 
-        total_prototypes = len(prototypes)
-        overlap_percentage = (prototype_overlap_count / total_prototypes) * 100.0
-
-        return overlap_percentage
+        return prototype_overlap_count
 
     def calculate_prototype_identity_labels(self, output_file):
         # Calculate the identity labels of prototypes and save them to a text file.

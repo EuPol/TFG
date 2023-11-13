@@ -2,6 +2,10 @@
 import pickle
 from oupn import OUPN
 import json
+from sklearn.metrics import confusion_matrix
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.metrics import ConfusionMatrixDisplay
 
 ############################################# INPUT PARAMETERS ##############################################
 
@@ -9,7 +13,7 @@ import json
 #EXPERIMENT_NAME = sys.argv[1]             # Name of the experiment
 #IDENTITY_TO_LEARN = int(sys.argv[2])      # Number of classes to learn
 DATABASE = 'FaceCOX' #sys.argv[3]          # Name of the dataset 
-INITIAL_KNOWN = 20 #int(sys.argv[4])       # Number of classes to learn initially
+INITIAL_KNOWN = 6 #int(sys.argv[4])       # Number of classes to learn initially
 SUBSEQUENCE_NUMBER=13
 EXPERIMENT_NAME='prueba'
 num_run=0
@@ -94,6 +98,69 @@ def test_phase(model:OUPN, test: list, index_correspondence: dict):
 
     return accuracy, precision, recall, f1, size_unsup
 
+def calculate_confusion_matrix(model:OUPN, test: list, index_correspondence: dict):
+    number_of_sequences_processed = 0
+    TP = 0
+    FP = 0
+    TN = 0
+    FN = 0
+
+    # Inicializa las listas de etiquetas verdaderas y etiquetas predichas
+    y_true = []
+    y_pred = []
+
+    for id_object, subsequence in enumerate(test):
+        number_of_sequences_processed += 1
+        u,y = model.model_test(subsequence[0])
+        if u >model.aplha:
+            prediction_nosup=-1
+        else:
+            prediction_nosup=y
+
+        if prediction_nosup >= 0:
+            prediction_nosup = index_correspondence[str(prediction_nosup)]
+
+        if id_object < len(model.prototypes):
+            true_label = id_object
+        else:
+            true_label = -1
+
+        if true_label < 0:
+            y_true.append("DESCONOCIDOS")
+        else:
+            y_true.append("INICIALES" if true_label < INITIAL_KNOWN else "APRENDIDOS")
+
+        if prediction_nosup < 0:
+            y_pred.append("DESCONOCIDOS")
+        else:
+            y_pred.append("INICIALES" if prediction_nosup < INITIAL_KNOWN else "APRENDIDOS")
+
+    # Calcula la matriz de confusión utilizando scikit-learn
+    confusion_matrix_3x3 = confusion_matrix(y_true, y_pred, labels=["INICIALES", "APRENDIDOS", "DESCONOCIDOS"])
+
+    # Imprime la matriz de confusión
+    # print("Matriz de Confusión 3x3:")
+    # print(confusion_matrix_3x3)
+
+    return confusion_matrix_3x3
+
+def plot_confusion_matrix(matrix, labels):
+    # Crear una instancia de ConfusionMatrixDisplay
+    disp = ConfusionMatrixDisplay(confusion_matrix=matrix, display_labels=labels)
+
+    # Configurar el gráfico de la matriz de confusión
+    disp.plot(cmap=plt.cm.Blues, values_format="d")
+
+    # Agregar título y etiquetas
+    plt.title(f'Matriz de Confusión ({INITIAL_KNOWN} clases iniciales)')
+    plt.xlabel('Etiquetas Predichas')
+    plt.ylabel('Etiquetas Verdaderas')
+
+    # Guardar el gráfico en un archivo
+    plt.savefig('Confusion_matrix.png')
+
+    # Mostrar el gráfico
+    plt.show()
 
 
 ############################################ MAIN ############################################
@@ -142,10 +209,15 @@ if __name__ == '__main__':
             elif predicted_label >= 0:
                 csv_data[str(predicted_label)].append(str(id_object)+'_'+str(step+1))
 
-    overlap_percentage = model.measure_overlap(model.prototypes)
-    print("Overlap percentage: ", overlap_percentage)
+    overlap_count = model.measure_overlap(model.prototypes)
+    print("Overlap count: ", overlap_count)
     #output_file = 'prototype_identity_labels.txt'
     #model.calculate_prototype_identity_labels(output_file)
+
+    confusion_matrix = calculate_confusion_matrix(model, test_data, index_correspondence)
+    print("Matriz de Confusión 3x3:")
+    print(confusion_matrix)
+    plot_confusion_matrix(confusion_matrix, ["INICIALES", "APRENDIDOS", "DESCONOCIDOS"])
 
     csv_final = {}  # Acabar de implementar los csv
     for index, ensemble in enumerate(model.prototypes):
