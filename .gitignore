@@ -12,3 +12,8 @@ experiments/*
 # ignore png files
 *.png
 
+# ignore csv files
+*.csv
+
+# ignore pdf files
+*.pdf

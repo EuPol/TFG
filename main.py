@@ -17,6 +17,7 @@ INITIAL_KNOWN = 6 #int(sys.argv[4])       # Number of classes to learn initially
 SUBSEQUENCE_NUMBER=13
 EXPERIMENT_NAME='prueba'
 num_run=0
+num_frames=4
 
 # Parameters
 
@@ -45,33 +46,34 @@ def test_phase(model:OUPN, test: list, index_correspondence: dict):
 
     for id_object, subsequence in enumerate(test):
         number_of_sequences_processed += 1
-        u,y = model.model_test(subsequence[0])
-        if u >model.aplha:
-            prediction_nosup=-1
-        else:
-            prediction_nosup=y
-
-        if prediction_nosup >= 0:
-            prediction_nosup = index_correspondence[str(prediction_nosup)]
-
-        if id_object < len(model.prototypes):
-            true_label = id_object
-        else:
-            true_label = -1
-
-        if true_label < 0:
-            if (prediction_nosup == -1):
-                TN += 1.
+        for frame in range(num_frames):
+            u,y = model.model_test(subsequence[frame])
+            if u >model.aplha:
+                prediction_nosup=-1
             else:
-                FP += 1.
-        else:
-            if (prediction_nosup == -1):
-                FN += 1.
+                prediction_nosup=y
+
+            if prediction_nosup >= 0:
+                prediction_nosup = index_correspondence[str(prediction_nosup)]
+
+            if id_object < len(model.prototypes):
+                true_label = id_object
             else:
-                if (prediction_nosup == true_label):
-                    TP += 1.
+                true_label = -1
+
+            if true_label < 0:
+                if (prediction_nosup == -1):
+                    TN += 1.
                 else:
                     FP += 1.
+            else:
+                if (prediction_nosup == -1):
+                    FN += 1.
+                else:
+                    if (prediction_nosup == true_label):
+                        TP += 1.
+                    else:
+                        FP += 1.
 
     # Calculate the metrics
     precision = float(TP) / float(max(TP + FP, 1))
@@ -111,29 +113,30 @@ def calculate_confusion_matrix(model:OUPN, test: list, index_correspondence: dic
 
     for id_object, subsequence in enumerate(test):
         number_of_sequences_processed += 1
-        u,y = model.model_test(subsequence[0])
-        if u >model.aplha:
-            prediction_nosup=-1
-        else:
-            prediction_nosup=y
+        for frame in range(num_frames):
+            u,y = model.model_test(subsequence[frame])
+            if u >model.aplha:
+                prediction_nosup=-1
+            else:
+                prediction_nosup=y
 
-        if prediction_nosup >= 0:
-            prediction_nosup = index_correspondence[str(prediction_nosup)]
+            if prediction_nosup >= 0:
+                prediction_nosup = index_correspondence[str(prediction_nosup)]
 
-        if id_object < len(model.prototypes):
-            true_label = id_object
-        else:
-            true_label = -1
+            if id_object < len(model.prototypes):
+                true_label = id_object
+            else:
+                true_label = -1
 
-        if true_label < 0:
-            y_true.append("DESCONOCIDOS")
-        else:
-            y_true.append("INICIALES" if true_label < INITIAL_KNOWN else "APRENDIDOS")
+            if true_label < 0:
+                y_true.append("DESCONOCIDOS")
+            else:
+                y_true.append("INICIALES" if true_label < INITIAL_KNOWN else "APRENDIDOS")
 
-        if prediction_nosup < 0:
-            y_pred.append("DESCONOCIDOS")
-        else:
-            y_pred.append("INICIALES" if prediction_nosup < INITIAL_KNOWN else "APRENDIDOS")
+            if prediction_nosup < 0:
+                y_pred.append("DESCONOCIDOS")
+            else:
+                y_pred.append("INICIALES" if prediction_nosup < INITIAL_KNOWN else "APRENDIDOS")
 
     # Calcula la matriz de confusión utilizando scikit-learn
     confusion_matrix_3x3 = confusion_matrix(y_true, y_pred, labels=["INICIALES", "APRENDIDOS", "DESCONOCIDOS"])
@@ -200,14 +203,15 @@ if __name__ == '__main__':
         accuracy, precision, recall, f1, size_unsup = test_phase(model, test_data, index_correspondence)
 
         for id_object, sequence in enumerate([i[step] for i in evaluation_data]):
-            predicted_label=model.process_sequence(sequence[0], user_counter, str(id_object)+'_'+str(step))
-            if predicted_label== user_counter:
-                index_correspondence[str(predicted_label)] = id_object
-                user_counter+=1
-                print ('NEW CLASS DETECTED: ', user_counter)
-                csv_data[str(predicted_label)] = [str(id_object)+'_'+str(step)]
-            elif predicted_label >= 0:
-                csv_data[str(predicted_label)].append(str(id_object)+'_'+str(step+1))
+            for frame in range(num_frames):
+                predicted_label=model.process_sequence(sequence[frame], user_counter, str(id_object)+'_'+str(step))
+                if predicted_label== user_counter:
+                    index_correspondence[str(predicted_label)] = id_object
+                    user_counter+=1
+                    print ('NEW CLASS DETECTED: ', user_counter)
+                    csv_data[str(predicted_label)] = [str(id_object)+'_'+str(step)]
+                elif predicted_label >= 0:
+                    csv_data[str(predicted_label)].append(str(id_object)+'_'+str(step+1))
 
     overlap_count = model.measure_overlap(model.prototypes)
     print("Overlap count: ", overlap_count)
