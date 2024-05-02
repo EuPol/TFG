@@ -11,6 +11,7 @@ from ncm import NearestMeanClassifier
 import csv
 import pandas as pd
 import os
+from anomalia import AnomalyClass
 
 ############################################# INPUT PARAMETERS ##############################################
 
@@ -21,7 +22,7 @@ DATABASE = 'FaceCOX' #sys.argv[3]          # Name of the dataset
 INITIAL_KNOWN = 5 #int(sys.argv[4])       # Number of classes to learn initially
 TRAINING_SEQUENCE=3
 SUBSEQUENCE_NUMBER=11
-EXPERIMENT_NAME='ncm_cos'
+EXPERIMENT_NAME='anomaly_seq'
 NUM_EXPERIMENTS = 10
 num_run=0
 num_frames=4
@@ -206,6 +207,16 @@ def plot_confusion_matrix(matrix, labels):
     # Mostrar el gráfico
     plt.show()
 
+# Función para obtener el valor mayoritario de un array
+def majority_value(arr):
+    count_true = arr.count(1)
+    count_false = arr.count(-1)
+    
+    if count_true >= count_false:
+        return True
+    else:
+        return False
+
 
 ############################################ MAIN ############################################
 
@@ -251,67 +262,79 @@ if __name__ == '__main__':
         ############################################# PRE-INITIALIZATION ##############################################
         # Initialize the model with the ncm method to create 5 initial prototypes
         print("Initializing model...")
-        #model.initialize(training_data)
-        #user_counter=INITIAL_KNOWN
+        
+        anomaly_classes = []  # Lista para almacenar las clases de detección de anomalías
+        user_counter = 0  # Contador parasignar IDs únicos a las clases
 
-        nearest_mean_classifier = NearestMeanClassifier()
+        #print("Numero de individuos: ", len(training_data))
+        #print("Numero de secuencias por individuo: ", len(training_data[0]))
+        #print("Numero de frames por secuencia: ", len(training_data[0][0]))
 
-        # Crear una lista con los individuos
-        individuos = list(range(len(training_data)))
 
-        # Crear diccionario de indices
-        #dic_etiquetas = {}
 
-        user_counter = 0
-        individuo = 0
-        # Procesamos individuos hasta que los completamos todos o creamos los prototipos iniciales
-        while individuos:
-            # Elegimos un individuo al azar
-            #individuo = random.Random(seed).choice(individuos)
-
-            # Obtenemos la primera secuencia del individuo
-            sequence = training_data[individuo][0]
-
-            final_etiqueta = TRAINING_SEQUENCE - len(training_data[individuo])
-
-            # Construimos la etiqueta del individuo
-            etiqueta = str(individuo)+'_'+str(final_etiqueta)  # Ejemplo: 0_0
-
-            # Procesamos la secuencia del individuo
-            for frame in range(num_frames):
-                predicted_label = nearest_mean_classifier.predict(sequence[frame], user_counter, etiqueta)
-
-                if predicted_label == -1:
-                    print("Creados todos los prototipos iniciales...")
-                    break
-                elif predicted_label == user_counter:
-                    index_correspondence[str(predicted_label)] = individuo
+        for index_individuo, individuo in enumerate(training_data):
+            for index_secuencia, secuencia in enumerate(individuo):
+                print(f"Individuo {index_individuo} - Secuencia {index_secuencia}")
+                # Si no hay clases de anomalía creadas, crea una nueva y ajústala con el primer frame
+                if not anomaly_classes:
+                    new_class = AnomalyClass("Class_1", user_counter, 'linear', 0.5)  # Asigna una etiqueta de clase inicial y un ID único
+                    new_class.fit(secuencia, str(index_individuo)+'_'+str(index_secuencia))  # Ajusta la clase con el primer frame
+                    anomaly_classes.append(new_class)
+                    #index_correspondence[str(user_counter)] = index_individuo
+                    csv_data[str(new_class.id)] = [str(index_individuo)+'_'+str(index_secuencia)]
                     user_counter += 1
-                    csv_data[str(predicted_label)] = [etiqueta]
-                elif predicted_label >= 0:
-                    csv_data[str(predicted_label)].append(str(individuo)+'_'+str(final_etiqueta))
-                #print(f"Csv_data[{str(predicted_label)}] = {csv_data[str(predicted_label)]}")
-            
-            
-            else:
-                # Eliminar la primera secuencia del individuo procesado del conjunto de entrenamiento
-                training_data[individuo].pop(0)
 
-                # Eliminar el individuo del procesamiento si ya no tiene más secuencias
-                if not training_data[individuo]:
-                    individuos.remove(individuo)
-                    individuo += 1
+                else:
+                    # Comprueba si el frame coincide con alguna clase existente
+                    # Se selecciona el elemento 0 de la lista de predicciones porque es un solo valor (array[0] = valor)
+                    resultados = []
+                    for anomaly_class_id, anomaly_class in enumerate(anomaly_classes):
+                        frame_fits = []
+                        for frame in secuencia:
+                            frame_fits.append(anomaly_class.predict([frame])[0])
+                            #frame_fits.append(anomaly_classes[0].predict([frame])[0])   # Ajusta la clase con el frame actual
+
+                        #frame_fits = [valor == 1 for valor in frame_fits]
+                        #frame_fits = [anomaly_classes[0].predict([frame]).tolist()]
+                            
+                        count_true = frame_fits.count(1)
+                        count_false = frame_fits.count(-1)
+
+                        resultado = majority_value(frame_fits)
+                        resultados.append(resultado)
+                        print(f"Modelo {anomaly_class_id} anomalias: ", frame_fits)
+                    print(resultados)
+                    
+                    if any(resultados):  # Si se ajusta a alguna clase existente
+                        index = resultados.index(True)
+                        print("Se ajusta a la clase ", index)
+                        anomaly_classes[index].fit(secuencia, str(index_individuo)+'_'+str(index_secuencia))  # Ajusta la clase con el frame actual
+                        csv_data[str(anomaly_classes[index].id)].append(str(index_individuo)+'_'+str(index_secuencia))
+                        
+                    elif len(anomaly_classes) < 5:  # Si no se ajusta a ninguna clase existente y aún no se han creado 5 clases
+                        new_class_label = f"Class_{len(anomaly_classes) + 1}"  # Asigna una nueva etiqueta de clase
+                        new_class = AnomalyClass(new_class_label, user_counter, 'linear', 0.1)
+                        new_class.fit(secuencia, str(index_individuo)+'_'+str(index_secuencia))  # Ajusta la nueva clase con el frame actual
+                        anomaly_classes.append(new_class)
+                        #index_correspondence[str(user_counter)] = index_individuo
+                        csv_data[str(new_class.id)] = [str(index_individuo)+'_'+str(index_secuencia)]
+                        user_counter += 1
+
+                    else:
+                        break  # Se han creado las 5 clases
+                    
+            else:
                 # Continue if the inner loop wasn't broken.
                 continue
             # Inner loop was broken, break the outer.
             break
-
+        
         ############################################# INITIALIZATION ##############################################
         # Creamos el modelo y le pasamos los prototipos iniciales
         model=OUPN(config)
-        for index, prototype in enumerate(nearest_mean_classifier.prototypes):
-            model.prototypes.append(prototype)
-            print("Prototype ", index, " added to the model...")
+        for anomaly in anomaly_classes:
+            model.prototypes.append({"id":anomaly.id,'z':anomaly.z, 'sample_labels':anomaly.sample_labels ,"p":anomaly.mean, "sigma":anomaly.sigma,"c":anomaly.c, "omega":anomaly.omega})
+            print("Prototype ", anomaly.id, " added to the model...")
         #print(model.prototypes)
         
         user_counter = len(model.prototypes)

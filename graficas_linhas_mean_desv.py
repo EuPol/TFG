@@ -11,7 +11,7 @@ if tipo_grafica == 'f1':
 
     # Obtener las columnas del DataFrame
     columnas = df.columns
-    df['threshold'] = [i / 10.0 for i in range(1, 10)]
+    df['threshold'] = [i / 10.0 for i in range(1, 13)]
 
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
@@ -49,7 +49,7 @@ elif tipo_grafica == 'overlap':
 
     # Obtener las columnas del DataFrame
     columnas = df.columns
-    df['threshold'] = [i / 10.0 for i in range(1, 10)]
+    df['threshold'] = [i / 10.0 for i in range(1, 13)]
 
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
@@ -76,7 +76,7 @@ elif tipo_grafica == 'overlap':
     ax.fill_between(df['threshold'], df['average'] - df['std'], df['average'] + df['std'], alpha=0.2)
 
     # Ajustar el rango del eje y entre 0 y 1
-    plt.ylim(0, 15)
+    #plt.ylim(0, 15)
 
     # Mostrar el gráfico
     plt.savefig(f'Overlap_grafico_{name}.pdf')  

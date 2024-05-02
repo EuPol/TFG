@@ -15,7 +15,7 @@ if tipo_grafica == 'f1':
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
 
-    ax.set_title('F1-Score con inicialización NCM',fontsize=16)
+    ax.set_title('F1-Score con inicialización estándar',fontsize=16)
     ax.set_xlabel('Experimento',fontsize=14)
     ax.set_ylabel('F1-Score',fontsize=14)
 
@@ -59,7 +59,7 @@ elif tipo_grafica == 'overlap':
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
 
-    ax.set_title('Cantidad de solapamientos con inicialización NCM',fontsize=16)
+    ax.set_title('Cantidad de solapamientos con inicialización estándar',fontsize=16)
     ax.set_xlabel('Experimento',fontsize=14)
     ax.set_ylabel('Número de solapamientos',fontsize=14)
 
@@ -84,11 +84,11 @@ elif tipo_grafica == 'overlap':
 
     stats_text = f'Máx: {max_value:.3f}\nMin: {min_value:.3f}\nMedia: {mean_value:.3f}\nDesv. Típica: {std_value:.3f}'
 
-    ax.annotate(stats_text, xy=(0.95, 0.05), xycoords='axes fraction', ha='right', va='bottom',
+    ax.annotate(stats_text, xy=(0.95, 0.95), xycoords='axes fraction', ha='right', va='top',
                 bbox=dict(boxstyle='round', alpha=0.1, facecolor='white'))
 
     # Ajustar el rango del eje y entre 0 y 1
-    plt.ylim(0, 15)
+    plt.ylim(0, 10)
 
     # Mostrar el gráfico 
     plt.savefig(f'Overlap_grafico_{name}.pdf')  

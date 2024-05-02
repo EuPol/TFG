@@ -11,6 +11,8 @@ from ncm import NearestMeanClassifier
 import csv
 import pandas as pd
 import os
+from finch import FINCH
+from collections import defaultdict
 
 ############################################# INPUT PARAMETERS ##############################################
 
@@ -21,7 +23,7 @@ DATABASE = 'FaceCOX' #sys.argv[3]          # Name of the dataset
 INITIAL_KNOWN = 5 #int(sys.argv[4])       # Number of classes to learn initially
 TRAINING_SEQUENCE=3
 SUBSEQUENCE_NUMBER=11
-EXPERIMENT_NAME='ncm_threshold_eu'
+EXPERIMENT_NAME='finch_3_sec'
 NUM_EXPERIMENTS = 10
 num_run=0
 num_frames=4
@@ -221,191 +223,214 @@ if __name__ == '__main__':
     f1_score_results = []  # Lista para almacenar los resultados
     overlap_count_results = []  # Lista para almacenar los resultados
 
+    # Listas para almacenar etiquetas obtenidas en FINCH
+    etiquetas_verdaderas_totales = []
+    etiquetas_predichas_totales = []
+
     ##### EXPERIMENTS #####
-    #for i in range(5, 16, 1):
-        #threshold = i / 10.0
-    for thresh in range(1, 13):
-        threshold = thresh / 10.0
-        for experiment in range(NUM_EXPERIMENTS):
-            seed = int(str(thresh) + str(experiment+1))
-            random.Random(seed).shuffle(dataset)
 
-            print(f"Experimento {experiment + 1} con threshold {threshold} y semilla {seed}...")
+    for experiment in range(NUM_EXPERIMENTS):
+        seed = int(str(experiment+1))
+        random.Random(seed).shuffle(dataset)
 
-            training_data = [i[0:TRAINING_SEQUENCE] for i in dataset]
-            test_data = [i[-1] for i in dataset]
-            evaluation_data = [i[TRAINING_SEQUENCE:-1] for i in dataset]
-            #train_labels = [str(i) for i in range(len(training_data))]
-            #test_labels = [str(i) for i in range(len(training_data))]
+        training_data = [i[0:TRAINING_SEQUENCE] for i in dataset]
+        #training_data = [i[0] for i in dataset]
+        test_data = [i[-1] for i in dataset]
+        evaluation_data = [i[TRAINING_SEQUENCE:-1] for i in dataset]
+        #evaluation_data = [i[1:-1] for i in dataset]
+        #train_labels = [str(i) for i in range(len(training_data))]
+        #test_labels = [str(i) for i in range(len(training_data))]
 
-            # Inicializar las listas de etiquetas verdaderas y etiquetas predichas
-            true_labels = []
-            pred_labels = []
+        # Inicializar las listas de etiquetas verdaderas y etiquetas predichas
+        true_labels = []
+        pred_labels = []
 
-            index_correspondence = {}
-            csv_data = {} # Acabar de implementar los csv
-            for i in range(len(dataset)):
+        index_correspondence = {}
+        csv_data = {} # Acabar de implementar los csv
+
+        ############################################# PRE-INITIALIZATION ##############################################
+
+        #print("Numero de individuos: ", len(training_data))
+        #print("Numero de secuencias por individuo: ", len(training_data[0]))
+        #print("Numero de frames por secuencia: ", len(training_data[0][0]))
+
+
+        # Initialize a dictionary to store cluster assignments
+        data = None
+        num_sec = 0
+        true_labels_FINCH = []
+        true_sec = 0
+
+        flattened_training_data = [element for sublist in training_data for element in sublist]
+
+        #for index_individuo, individuo in enumerate(training_data):
+        for index_secuencia, secuencia in enumerate(flattened_training_data):
+            if data is None:
+                data = secuencia[:10] 
+                num_sec += 1
+                true_labels_FINCH += 10 * [true_sec]
+            else:
+                data = np.concatenate([data, secuencia[:10]], axis=0)
+                num_sec += 1
+                if index_secuencia % 3 == 0:
+                    true_sec += 1
+                true_labels_FINCH += 10 * [true_sec]
+
+            if num_sec < (INITIAL_KNOWN*TRAINING_SEQUENCE): # Si todavía no hemos formado un grupo de 15 secuencias (5 individuos iniciales y 3 sec por individuo) no realizamos el clustering, ya que, como hay un individuo por secuencia, hasta no tener 15 el clustering no podria crear 5 clusters robustos
+                continue
+            
+            c, num_clust, req_c = FINCH(data, initial_rank=None, req_clust=INITIAL_KNOWN, distance='cosine', ensure_early_exit=False, verbose=False)
+            '''
+            print("Numero de clusters: ", num_clust)
+            print(num_sec)
+            print(c)
+            print(len(data))
+            print(req_c)
+            '''
+            
+            if max(req_c) >= INITIAL_KNOWN-1:
                 '''
-                if i < INITIAL_KNOWN:
-                    csv_data[str(i)] = [str(i)+'_0']
-                    index_correspondence[str(i)] = i
-                else:
+                print("Clustering realizado con exito")
+                print("True labels: ", np.array(true_labels))
+                print("Predicted labels: ", req_c)
                 '''
+                etiquetas_verdaderas_totales.append(np.array(true_labels_FINCH))
+                etiquetas_predichas_totales.append(req_c)
+                break
+            '''
+            else:
+                continue
+            break
+            '''
+
+        with open(f"experiments/{EXPERIMENT_NAME}/len_data.txt", 'a') as lendata:
+            np.savetxt(lendata, [len(data)], fmt='%d')
+
+        # creamos el conjunto de clusters
+        grupos = [[] for _ in range(max(req_c) + 1)]
+
+        contador_req_c = 0
+
+        for index_frame, frame in enumerate(data):
+            grupos[req_c[contador_req_c]].append(frame)
+
+            if contador_req_c == len(req_c) - 1:
+                break
+            else:
+                contador_req_c += 1
+        
+        '''
+        print(len(training_data))
+        print(len(grupos))
+        print(len(training_data[0]))
+        print(len(grupos[0]))
+        print(len(training_data[0][0]))
+        print(len(grupos[0][0]))
+        '''
+        ############################################# INITIALIZATION ##############################################
+        for i in range(len(dataset)):
+            if i < INITIAL_KNOWN:
+                csv_data[str(i)] = [str(i)+'_0']
+                index_correspondence[str(i)] = i
+            else:
                 index_correspondence[str(i)] = -1
 
-            ############################################# PRE-INITIALIZATION ##############################################
-            # Initialize the model with the ncm method to create 6 initial prototypes
-            print("Initializing model...")
-            #model.initialize(training_data)
-            #user_counter=INITIAL_KNOWN
+        print("Initializing model...")
+        model=OUPN(config)
+        model.initialize(grupos)
+        user_counter=len(model.prototypes)
 
-            nearest_mean_classifier = NearestMeanClassifier()
-            nearest_mean_classifier.threshold = threshold
-            print("Threshold: ", nearest_mean_classifier.threshold)
+        print("Model initialized with ", user_counter, " prototypes...")
 
-            # Crear una lista con los individuos
-            individuos = list(range(len(training_data)))
-
-            # Crear diccionario de indices
-            #dic_etiquetas = {}
-
-            user_counter = 0
-            individuo = 0
-            # Procesamos individuos hasta que los completamos todos o creamos los prototipos iniciales
-            while individuos:
-                # Elegimos un individuo al azar
-                #individuo = random.Random(seed).choice(individuos)
-
-                # Obtenemos la primera secuencia del individuo
-                sequence = training_data[individuo][0]
-
-                final_etiqueta = TRAINING_SEQUENCE - len(training_data[individuo])
-
-                # Construimos la etiqueta del individuo
-                etiqueta = str(individuo)+'_'+str(final_etiqueta)  # Ejemplo: 0_0
-
-                # Procesamos la secuencia del individuo
-                for frame in range(num_frames):
-                    predicted_label = nearest_mean_classifier.predict(sequence[frame], user_counter, etiqueta)
-
-                    if predicted_label == -1:
-                        print("Creados todos los prototipos iniciales...")
-                        break
-                    elif predicted_label == user_counter:
-                        index_correspondence[str(predicted_label)] = individuo
-                        user_counter += 1
-                        csv_data[str(predicted_label)] = [etiqueta]
-                    elif predicted_label >= 0:
-                        csv_data[str(predicted_label)].append(str(individuo)+'_'+str(final_etiqueta))
-                    #print(f"Csv_data[{str(predicted_label)}] = {csv_data[str(predicted_label)]}")
-                
-                
-                else:
-                    # Eliminar la primera secuencia del individuo procesado del conjunto de entrenamiento
-                    training_data[individuo].pop(0)
-
-                    # Eliminar el individuo del procesamiento si ya no tiene más secuencias
-                    if not training_data[individuo]:
-                        individuos.remove(individuo)
-                        individuo += 1
-                    # Continue if the inner loop wasn't broken.
-                    continue
-                # Inner loop was broken, break the outer.
-                break
-
-            ############################################# INITIALIZATION ##############################################
-            # Creamos el modelo y le pasamos los prototipos iniciales
-            model=OUPN(config)
-            for index, prototype in enumerate(nearest_mean_classifier.prototypes):
-                model.prototypes.append(prototype)
-                print("Prototype ", index, " added to the model...")
-            #print(model.prototypes)
+        ############################################# EVALUATION ##############################################
+        
+        print("Starting evaluation process...")
+        for step in range(SUBSEQUENCE_NUMBER):
+            print(f"STEP {step+1} OF {SUBSEQUENCE_NUMBER}")
             
-            user_counter = len(model.prototypes)
-            print("Model initialized with ", user_counter, " prototypes...")
+            print("Initial test phase...")
+            accuracy, precision, recall, f1, size_unsup = test_phase(model, test_data, index_correspondence)
 
-            ############################################# EVALUATION ##############################################
-            print("Starting evaluation process...")
-            for step in range(SUBSEQUENCE_NUMBER):
-                final = step + TRAINING_SEQUENCE - 1
-                print(f"STEP {step+1} OF {SUBSEQUENCE_NUMBER}")
-                
-                print("Initial test phase...")
-                accuracy, precision, recall, f1, size_unsup = test_phase(model, test_data, index_correspondence)
+            for id_object, sequence in enumerate([i[step] for i in evaluation_data]):
+                for frame in range(num_frames):
+                    predicted_label=model.process_sequence(sequence[frame], user_counter, str(id_object)+'_'+str(step))
+                    if predicted_label == user_counter:
+                        index_correspondence[str(predicted_label)] = id_object
+                        user_counter+=1
+                        print ('NEW CLASS DETECTED: ', user_counter)
+                        csv_data[str(predicted_label)] = [str(id_object)+'_'+str(step)]
+                    elif predicted_label >= 0:
+                        csv_data[str(predicted_label)].append(str(id_object)+'_'+str(step+1))
+                    
+                    if id_object < config['id_to_learn']:
+                        # Agregar las etiquetas verdaderas y predichas a las listas
+                        true_labels.append(id_object)
+                        pred_labels.append(predicted_label)
+                    else:
+                        # Agregar las etiquetas verdaderas y predichas a las listas
+                        true_labels.append(-1)
+                        pred_labels.append(predicted_label)
 
-                for id_object, sequence in enumerate([i[step] for i in evaluation_data]):
-                    for frame in range(num_frames):
-                        predicted_label=model.process_sequence(sequence[frame], user_counter, str(id_object)+'_'+str(final+1))
-                        if predicted_label== user_counter:
-                            index_correspondence[str(predicted_label)] = id_object
-                            user_counter+=1
-                            print ('NEW CLASS DETECTED: ', user_counter)
-                            csv_data[str(predicted_label)] = [str(id_object)+'_'+str(final+1)]
-                        elif predicted_label >= 0:
-                            csv_data[str(predicted_label)].append(str(id_object)+'_'+str(final+1))
-                        
-                        if id_object < len(model.prototypes):
-                            # Agregar las etiquetas verdaderas y predichas a las listas
-                            true_labels.append(id_object)
-                            pred_labels.append(predicted_label)
-                        else:
-                            # Agregar las etiquetas verdaderas y predichas a las listas
-                            true_labels.append(-1)
-                            pred_labels.append(predicted_label)
+        # Final test phase
+        accuracy, precision, recall, f1_score, size_unsup = test_phase(model, test_data, index_correspondence)
+        # F1-Score
+        f1_score_results.append({
+            'Experimento': experiment + 1,  # Sumar 1 para empezar desde 1 en lugar de 0
+            'Resultado': f1_score
+        })
+        print("F1-Score final: ", f1_score)
+        # Overlap count
+        overlap_count = model.measure_overlap(model.prototypes)
+        overlap_count_results.append({
+            'Experimento': experiment + 1,  # Sumar 1 para empezar desde 1 en lugar de 0
+            'Resultado': overlap_count
+        })
+        print("Overlap count: ", overlap_count)
 
-            # Final test phase
-            accuracy, precision, recall, f1_score, size_unsup = test_phase(model, test_data, index_correspondence)
+        # Create a list of tuples for each row
+        data_eval = np.column_stack((true_labels, pred_labels))
+        with open(f"experiments/{EXPERIMENT_NAME}/{seed}"+'_labels_eval.txt', 'a') as txtfile:
+            np.savetxt(txtfile, data_eval, fmt='%d')
 
-            # F1-Score
-            f1_score_results.append({
-                'Threshold': threshold,
-                'Experimento': experiment + 1,  # Sumar 1 para empezar desde 1 en lugar de 0
-                'Resultado': f1_score
-            })
-            print("F1-Score final: ", f1_score)
-            # Overlap count
-            overlap_count = model.measure_overlap(model.prototypes)
-            overlap_count_results.append({
-                'Threshold': threshold,
-                'Experimento': experiment + 1,  # Sumar 1 para empezar desde 1 en lugar de 0
-                'Resultado': overlap_count
-            })
-            print("Overlap count: ", overlap_count)
+        y_true, y_pred = calculate_confusion_matrix(model, test_data, index_correspondence, INITIAL_KNOWN)
+        # Create a list of tuples for each row
+        data = np.column_stack((y_true, y_pred))
+        # Append the data to the CSV file (or create a new file if it doesn't exist)
+        with open(f"experiments/{EXPERIMENT_NAME}/"+'0_matriz_confusion_3_test.csv', 'a', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerows(data)
 
-            # Create a list of tuples for each row
-            data_eval = np.column_stack((true_labels, pred_labels))
-            with open(f"experiments/{EXPERIMENT_NAME}/{seed}"+'_labels_eval.txt', 'a') as txtfile:
-                np.savetxt(txtfile, data_eval, fmt='%d')
-
-            y_true, y_pred = calculate_confusion_matrix(model, test_data, index_correspondence, INITIAL_KNOWN)
-            # Create a list of tuples for each row
-            data = np.column_stack((y_true, y_pred))
-            # Append the data to the CSV file (or create a new file if it doesn't exist)
-            with open(f"experiments/{EXPERIMENT_NAME}/"+'0_matriz_confusion_3_test.csv', 'a', newline='') as csvfile:
-                csv_writer = csv.writer(csvfile)
-                csv_writer.writerows(data)
-
-            test_phase_true, test_phase_pred = test_phase_labels(model, test_data, index_correspondence)
-            # Create a list of tuples for each row
-            data_test = np.column_stack((test_phase_true, test_phase_pred))
-            # Write the data to a text file
-            with open(f"experiments/{EXPERIMENT_NAME}/"+'0_matriz_confusion_all_labels_test.txt', 'a') as txtfile:
-                np.savetxt(txtfile, data_test, fmt='%d')
+        test_phase_true, test_phase_pred = test_phase_labels(model, test_data, index_correspondence)
+        # Create a list of tuples for each row
+        data_test = np.column_stack((test_phase_true, test_phase_pred))
+        # Write the data to a text file
+        with open(f"experiments/{EXPERIMENT_NAME}/"+'0_matriz_confusion_all_labels_test.txt', 'a') as txtfile:
+            np.savetxt(txtfile, data_test, fmt='%d')
 
 
     ##### END EXPERIMENTS #####
+            
+    # Convertir las listas totales en arrays de numpy
+    etiquetas_verdaderas_totales = np.array(etiquetas_verdaderas_totales)
+    etiquetas_predichas_totales = np.array(etiquetas_predichas_totales)
+
+    directory = f"experiments/{EXPERIMENT_NAME}/"
+
+    # Guardar las etiquetas totales en archivos en el directorio especificado
+    np.save(directory + 'etiquetas_verdaderas_totales.npy', etiquetas_verdaderas_totales)
+    np.save(directory + 'etiquetas_predichas_totales.npy', etiquetas_predichas_totales)
 
     # Creamos los dataframe de los resultados
     df_f1 = pd.DataFrame(f1_score_results)
     df_overlap = pd.DataFrame(overlap_count_results)
 
-    # Pivote de los DataFrame para obtener el formato deseado
-    df_f1_pivot = df_f1.pivot(index='Threshold', columns='Experimento', values='Resultado')
-    df_overlap_pivot = df_overlap.pivot(index='Threshold', columns='Experimento', values='Resultado')
+    # Transponer el DataFrame
+    df_f1_transpuesto = df_f1.T
+    df_overlap_transpuesto = df_overlap.T
 
     # Escribir los DataFrame pivotados en un archivo Excel
-    df_f1_pivot.to_csv(f'resultados_f1_score_{EXPERIMENT_NAME}.csv', index=False)
-    df_overlap_pivot.to_csv(f'resultados_overlap_{EXPERIMENT_NAME}.csv', index=False) 
+    df_f1_transpuesto.to_csv(f'resultados_f1_score_{EXPERIMENT_NAME}.csv', index=False, header=False)
+    df_overlap_transpuesto.to_csv(f'resultados_overlap_{EXPERIMENT_NAME}.csv', index=False, header=False) 
 
     '''
     confusion_matrix = calculate_confusion_matrix(model, test_data, index_correspondence)
