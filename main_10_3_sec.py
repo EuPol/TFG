@@ -286,6 +286,9 @@ if __name__ == '__main__':
                         true_labels.append(-1)
                         pred_labels.append(predicted_label)
 
+        overlap_bhattacharyya = model.measure_overlap_bhattacharyya(model.prototypes)
+        print("Overlap Bhattacharyya: ", overlap_bhattacharyya)
+
         # Final test phase
         accuracy, precision, recall, f1_score, size_unsup = test_phase(model, test_data, index_correspondence)
         # F1-Score

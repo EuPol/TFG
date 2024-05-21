@@ -9,6 +9,7 @@ import numpy as np
 import sklearn.metrics.pairwise as sk
 from anomalia import AnomalyClass
 from scipy import stats
+import math
 
 
 def distance(x, y):
@@ -136,22 +137,23 @@ class OUPN():
         
         # Ordenar los puntajes de forma ascendente
         sorted_scores = np.sort(scores_ensembles)
-        # Seleccionar los puntajes más bajos (anteriormente puntajes más altos)
+        # Seleccionar los puntajes más bajos
         lower_responses = sorted_scores[-int(len(scores_ensembles)):-1]
-        # Calcular la mediana (anteriormente puntaje más bajo)
+        # Calcular la mediana
         median = np.median(sorted_scores[-1:])
 
-        # Calcular la distancia entre los puntajes más bajos y la mediana (anteriormente puntaje más alto)
+        # Calcular la distancia entre los puntajes más bajos y la mediana
         distance = np.abs(lower_responses - median)
-        # Calcular la distancia entre el puntaje más alto y la mediana (anteriormente puntaje más bajo)
+        # Calcular la distancia entre el puntaje más alto y la mediana
         winner_score = np.abs(sorted_scores[-1] - median)
 
         # Ajuste de la distribución de Weibull
-        shape, _, scale = stats.weibull_max.fit(distance, floc=0)
+        shape, _, scale = stats.weibull_min.fit(distance, floc=0)
+        #print(f'Shape: {shape}, Scale: {scale}')
 
         # Evaluación EVT
         EVT_value_1 = __weibull(winner_score, scale, shape)
-        print(f'EVT value: {EVT_value_1}')
+        #print(f'EVT value: {EVT_value_1}')
 
         if EVT_value_1 < 0.01:
             # umbral mas pequeño, mas exigente. Probar 0.001
@@ -162,6 +164,73 @@ class OUPN():
             id_pred = -1
         
         return id_pred
+    
+    def _bhattacharyya_coefficient(self, mu1, mu2, var1, var2):
+            # Calculate covariance matrices
+            sigma1 = np.diag(var1)
+            sigma2 = np.diag(var2)
+            
+            # Calculate mean difference
+            mean_diff = mu1 - mu2
+            
+            # Calculate covariance sum
+            cov_sum = sigma1 + sigma2
+            
+            # Calculate Mahalanobis distance
+            mahalanobis_dist = np.dot(mean_diff.T, np.linalg.inv(cov_sum)).dot(mean_diff)
+            
+            # Calculate determinants
+            det_sigma1_sigma2 = np.linalg.det(sigma1 @ sigma2)
+            det_avg_sigma = np.linalg.det((sigma1 + sigma2) / 2)
+            
+            # Calculate Bhattacharyya coefficient
+            bc = np.exp(-0.125 * mahalanobis_dist) * np.sqrt(det_sigma1_sigma2 / det_avg_sigma)
+            
+            return bc
+    
+    def _calculate_bhattacharyya_coefficient(self, gaussian1, gaussian2):
+        # Example usage
+        mu1 = gaussian1["p"]  # Mean vector of the first Gaussian
+        mu2 = gaussian2["p"]   # Mean vector of the second Gaussian
+
+        sigma1 = math.sqrt(1 / gaussian1["c"])
+        sigma2 = math.sqrt(1 / gaussian2["c"])
+
+        var1 = np.ones(len(mu1)) * sigma1    # Variance (assuming same variance for all dimensions)
+        var2 = np.ones(len(mu2)) * sigma2
+        #var1 = [gaussian1["c"]] * len(mu1)
+        print(var1)
+        #var2 = [gaussian2["c"]] * len(mu2)
+
+        #print(f"shape mu1: {mu1.shape}, shape mu2: {mu2.shape}, shape var1: {var1.shape}, shape var2: {var2.shape}")
+
+        bc = self._bhattacharyya_coefficient(mu1, mu2, var1, var2)
+        #print("Bhattacharyya coefficient:", bc)
+
+        return bc
+
+    def measure_overlap_bhattacharyya(self, prototypes):
+        overlap_count = 0
+        total_pairs = 0
+        solape = False
+
+        for i in range(len(prototypes)):
+            for j in range(i + 1, len(prototypes)):
+                solape = False
+                # Calcula el coeficiente de Bhattacharyya entre las gaussianas i y j
+                bhattacharyya_coef = self._calculate_bhattacharyya_coefficient(prototypes[i], prototypes[j])
+
+                if bhattacharyya_coef > 0.975:
+                    solape = True
+
+                #if solape:
+                print(f"Prototypes {i} and {j}. Solape: {solape} Bhattacharyya distance: {bhattacharyya_coef}")
+
+                #if bhattacharyya_coef >= -np.log(threshold):
+                if bhattacharyya_coef > 0.975:
+                    overlap_count += 1
+
+        return overlap_count
     
     def create_prototype(self, sample, index, sample_label):
         self.prototypes.append({"id":index,'z':sample, 'sample_labels':[sample_label] ,"p":sample, "sigma":1,"c":1, "omega":1})
@@ -191,10 +260,11 @@ class OUPN():
     def process_sequence(self, sequence, new_label,sample_label):
         u,y,y_smax=self.e_step(sequence, self.prototypes, self.beta, self.gamma, self.tau)
 
-        max_score_id = self.calculate_max_score_id(y_smax)
+        #max_score_id = self.calculate_max_score_id(u)
         #print(f'User counter {new_label} Sample label {sample_label} con ID del puntaje máximo: {max_score_id}')
        
-        if min(u)>self.aplha and max_score_id == -1:
+        #if min(u)>self.aplha and max_score_id == -1:
+        if min(u)>self.aplha:
             if new_label<self.LEARNED_IDS:
                 self.create_prototype(sequence, new_label,sample_label)
                 return new_label
@@ -209,7 +279,7 @@ class OUPN():
     def model_test(self,features):
         u,y,y_smax=self.e_step(features, self.prototypes, self.beta, self.gamma, self.tau)
         return min(u),np.argmax(y)
-    
+    '''
     def bhattacharyya_distance(self, gaussian1, gaussian2):
         # Gaussian1 y Gaussian2 son diccionarios que contienen información sobre las gaussianas.
         # Por ejemplo, Gaussian1 = {"p": media1, "sigma": varianza1}, Gaussian2 = {"p": media2, "sigma": varianza2}
@@ -245,7 +315,7 @@ class OUPN():
 
         overlap_percentage = (overlap_count / total_pairs) * 100.0
         return overlap_percentage
-    
+    '''
     def calculate_prototype_overlap(self):
         # Crea un diccionario donde las claves son etiquetas de identidad y los valores son listas de prototipos
         identity_prototype_dict = {}
