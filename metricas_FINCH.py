@@ -31,7 +31,8 @@ for i in range(len(etiquetas_verdaderas_totales)):
     # Obtener las etiquetas verdaderas y predichas del experimento actual
     verdaderas = etiquetas_verdaderas_totales[i]
     predichas = etiquetas_predichas_totales[i]
-    
+    if i == 0:
+        print(etiquetas_verdaderas_totales[i])
     # Contar los solapamientos para el experimento actual
     for j in range(len(verdaderas)):
         if verdaderas[j] != predichas[j]:
@@ -70,12 +71,12 @@ frecuencia_predichas = np.bincount(etiquetas_predichas_totales.flatten(), minlen
 # Crear un histograma de las etiquetas verdaderas y predichas
 plt.figure(figsize=(10, 5))
 
-plt.bar(etiquetas_posibles - 0.2, frecuencia_verdaderas, width=0.4, label='Etiquetas Verdaderas')
-plt.bar(etiquetas_posibles + 0.2, frecuencia_predichas, width=0.4, label='Etiquetas Predichas')
+plt.bar(etiquetas_posibles - 0.2, frecuencia_verdaderas, width=0.4, label='Etiquetas Verdadeiras')
+plt.bar(etiquetas_posibles + 0.2, frecuencia_predichas, width=0.4, label='Etiquetas Preditas')
 
 plt.xlabel('Etiqueta')
 plt.ylabel('Frecuencia')
-plt.title('Histograma de etiquetas obtenidas mediante FINCH')
+plt.title('Histograma de etiquetas obtidas mediante FINCH')
 plt.xticks(etiquetas_posibles)
 plt.ylim(0, 400)
 plt.legend()

@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import sys
 
-name = str(sys.argv[1])
-tipo_grafica = str(sys.argv[2])
+name = str(sys.argv[2])
+tipo_grafica = str(sys.argv[1])
 
 if tipo_grafica == 'f1':
     # Cargar el archivo CSV
@@ -16,8 +16,8 @@ if tipo_grafica == 'f1':
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
 
-    ax.set_title('F1-Score en base al threshold empleado',fontsize=16)
-    ax.set_xlabel('Threshold',fontsize=14)
+    ax.set_title('F1-Score umbral euclídea',fontsize=16)
+    ax.set_xlabel('Umbral',fontsize=14)
     ax.set_ylabel('F1-Score',fontsize=14)
 
     plt.rcParams['grid.color'] = (0.5, 0.5, 0.5, 0.1)
@@ -54,9 +54,9 @@ elif tipo_grafica == 'overlap':
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
 
-    ax.set_title('Cantidad de solapamientos en base al threshold empleado',fontsize=16)
-    ax.set_xlabel('Threshold',fontsize=14)
-    ax.set_ylabel('Número de solapamientos',fontsize=14)
+    ax.set_title('Cantidade de solapamentos umbral euclídea',fontsize=16)
+    ax.set_xlabel('Umbral',fontsize=14)
+    ax.set_ylabel('Número de solapamentos',fontsize=14)
 
     plt.rcParams['grid.color'] = (0.5, 0.5, 0.5, 0.1)
     ax.grid(color = 'grey', linestyle = '--', linewidth = 0.5, alpha = 0.4)

@@ -2,8 +2,8 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import sys
 
-name = str(sys.argv[1])
-tipo_grafica = str(sys.argv[2])
+name = str(sys.argv[2])
+tipo_grafica = str(sys.argv[1])
 
 if tipo_grafica == 'f1':
     # Cargar el archivo CSV
@@ -15,7 +15,7 @@ if tipo_grafica == 'f1':
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
 
-    ax.set_title('F1-Score con inicialización estándar',fontsize=16)
+    ax.set_title('F1-Score modelo base',fontsize=16)
     ax.set_xlabel('Experimento',fontsize=14)
     ax.set_ylabel('F1-Score',fontsize=14)
 
@@ -59,9 +59,9 @@ elif tipo_grafica == 'overlap':
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
 
-    ax.set_title('Cantidad de solapamientos con inicialización estándar',fontsize=16)
+    ax.set_title('Cantidade de solapamentos modelo base',fontsize=16)
     ax.set_xlabel('Experimento',fontsize=14)
-    ax.set_ylabel('Número de solapamientos',fontsize=14)
+    ax.set_ylabel('Número de solapamentos',fontsize=14)
 
     plt.rcParams['grid.color'] = (0.5, 0.5, 0.5, 0.1)
     ax.grid(color = 'grey', linestyle = '--', linewidth = 0.5, alpha = 0.4)
@@ -88,7 +88,7 @@ elif tipo_grafica == 'overlap':
                 bbox=dict(boxstyle='round', alpha=0.1, facecolor='white'))
 
     # Ajustar el rango del eje y entre 0 y 1
-    plt.ylim(0, 10)
+    plt.ylim(0, 20)
 
     # Mostrar el gráfico 
     plt.savefig(f'Overlap_grafico_{name}.pdf')  
