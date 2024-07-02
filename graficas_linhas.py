@@ -15,7 +15,7 @@ if tipo_grafica == 'f1':
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
 
-    ax.set_title('F1-Score modelo base',fontsize=16)
+    ax.set_title(f'F1-Score {name}',fontsize=16)
     ax.set_xlabel('Experimento',fontsize=14)
     ax.set_ylabel('F1-Score',fontsize=14)
 
@@ -59,7 +59,7 @@ elif tipo_grafica == 'overlap':
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
 
-    ax.set_title('Cantidade de solapamentos modelo base',fontsize=16)
+    ax.set_title(f'Cantidade de solapamentos {name}',fontsize=16)
     ax.set_xlabel('Experimento',fontsize=14)
     ax.set_ylabel('Número de solapamentos',fontsize=14)
 

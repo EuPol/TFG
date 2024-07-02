@@ -11,12 +11,12 @@ if tipo_grafica == 'f1':
 
     # Obtener las columnas del DataFrame
     columnas = df.columns
-    df['threshold'] = [i / 10.0 for i in range(1, 13)]
+    df['threshold'] = [i / 10.0 for i in range(1, 11)]
 
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
 
-    ax.set_title('F1-Score umbral euclídea',fontsize=16)
+    ax.set_title(f'F1-Score umbral coseno',fontsize=16)
     ax.set_xlabel('Umbral',fontsize=14)
     ax.set_ylabel('F1-Score',fontsize=14)
 
@@ -49,12 +49,12 @@ elif tipo_grafica == 'overlap':
 
     # Obtener las columnas del DataFrame
     columnas = df.columns
-    df['threshold'] = [i / 10.0 for i in range(1, 13)]
+    df['threshold'] = [i / 10.0 for i in range(1, 11)]
 
     fig,ax = plt.subplots(figsize=(8,6))
     plt.rcParams['legend.title_fontsize'] = 18
 
-    ax.set_title('Cantidade de solapamentos umbral euclídea',fontsize=16)
+    ax.set_title(f'Cantidade de solapamentos umbral coseno',fontsize=16)
     ax.set_xlabel('Umbral',fontsize=14)
     ax.set_ylabel('Número de solapamentos',fontsize=14)
 
