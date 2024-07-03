@@ -217,12 +217,13 @@ if __name__ == '__main__':
     print("Overlap count: ", overlap_count)
     #output_file = 'prototype_identity_labels.txt'
     #model.calculate_prototype_identity_labels(output_file)
-
+    '''
     confusion_matrix = calculate_confusion_matrix(model, test_data, index_correspondence)
     print("Matriz de Confusión 3x3:")
     print(confusion_matrix)
     plot_confusion_matrix(confusion_matrix, ["INICIALES", "APRENDIDOS", "DESCONOCIDOS"])
-
+    '''
+    
     csv_final = {}  # Acabar de implementar los csv
     for index, ensemble in enumerate(model.prototypes):
         csv_final[str(index)] = []
