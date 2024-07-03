@@ -1,4 +1,4 @@
-Auto-aprendizaxe para re-identificación de persoas nun entorno de mundo aberto sen identidades coñecidas de partida
+**Auto-aprendizaxe para re-identificación de persoas nun entorno de mundo aberto sen identidades coñecidas de partida**
 
 Por cuestións de almacenamento, neste repositorio non aparecen as características extraídas dos datos da base de datos FaceCOX.
 
